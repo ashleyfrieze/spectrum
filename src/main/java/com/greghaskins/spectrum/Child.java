@@ -7,7 +7,7 @@ interface Child {
 
   Description getDescription();
 
-  void run(RunNotifier notifier);
+  void run(RunNotifier notifier, final BlockExecutor executor) throws Throwable;
 
   int testCount();
 

@@ -120,23 +120,28 @@ final class Suite implements Parent, Child {
   }
 
   @Override
-  public void run(final RunNotifier notifier) {
+  public void run(final RunNotifier notifier, final BlockExecutor executor) throws Throwable {
     if (testCount() == 0) {
-      notifier.fireTestIgnored(this.description);
-      runChildren(notifier);
+      executor.execute(() -> {
+        notifier.fireTestIgnored(this.description);
+        runChildren(notifier, executor);}, isRootLevel());
     } else {
-      runChildren(notifier);
-      runAfterAll(notifier);
+      executor.execute(() -> {
+        runChildren(notifier, executor);
+        runAfterAll(notifier);}, isRootLevel());
     }
   }
 
-  private void runChildren(final RunNotifier notifier) {
-    this.children.forEach((child) -> runChild(child, notifier));
+  private void runChildren(final RunNotifier notifier, final BlockExecutor blockExecutor) throws Throwable {
+    for (Child child:children) {
+      runChild(child, notifier, blockExecutor);
+    }
   }
 
-  private void runChild(final Child child, final RunNotifier notifier) {
+  private void runChild(final Child child, final RunNotifier notifier, final BlockExecutor blockExecutor)
+      throws Throwable {
     if (this.focusedChildren.isEmpty() || this.focusedChildren.contains(child)) {
-      child.run(notifier);
+      child.run(notifier, blockExecutor);
     } else {
       notifier.fireTestIgnored(child.getDescription());
     }
@@ -163,4 +168,7 @@ final class Suite implements Parent, Child {
     this.children.clear();
   }
 
+  private boolean isRootLevel() {
+    return parent != Parent.NONE;
+  }
 }
