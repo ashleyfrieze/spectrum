@@ -14,7 +14,9 @@ public final class Spectrum extends Runner {
   /**
    * A generic code block with a {@link #run()} method to perform any action. Usually defined by a
    * lambda function.
+   * @deprecated since 1.0.1 - use {@link com.greghaskins.spectrum.Block} instead
    */
+  @Deprecated
   @FunctionalInterface
   public interface Block extends com.greghaskins.spectrum.Block {
     /**
@@ -34,9 +36,9 @@ public final class Spectrum extends Runner {
    *        each expected behavior
    *
    */
-  public static void describe(final String context, final Block block) {
+  public static void describe(final String context, final com.greghaskins.spectrum.Block block) {
     final Suite suite = getCurrentSuiteBeingDeclared().addSuite(context);
-    beginDefintion(suite, block);
+    beginDefinition(suite, block);
   }
 
   /**
@@ -49,10 +51,10 @@ public final class Spectrum extends Runner {
    * @see #describe(String, Block)
    *
    */
-  public static void fdescribe(final String context, final Block block) {
+  public static void fdescribe(final String context, final com.greghaskins.spectrum.Block block) {
     final Suite suite = getCurrentSuiteBeingDeclared().addSuite(context);
     suite.focus();
-    beginDefintion(suite, block);
+    beginDefinition(suite, block);
   }
 
   /**
@@ -65,10 +67,10 @@ public final class Spectrum extends Runner {
    * @see #describe(String, Block)
    *
    */
-  public static void xdescribe(final String context, final Block block) {
+  public static void xdescribe(final String context, final com.greghaskins.spectrum.Block block) {
     final Suite suite = getCurrentSuiteBeingDeclared().addSuite(context);
     suite.ignore();
-    beginDefintion(suite, block);
+    beginDefinition(suite, block);
   }
 
   /**
@@ -78,7 +80,7 @@ public final class Spectrum extends Runner {
    * @param block {@link Block} that verifies the system behaves as expected and throws a
    *        {@link java.lang.Throwable Throwable} if that expectation is not met.
    */
-  public static void it(final String behavior, final Block block) {
+  public static void it(final String behavior, final com.greghaskins.spectrum.Block block) {
     getCurrentSuiteBeingDeclared().addSpec(behavior, block);
   }
 
@@ -102,7 +104,7 @@ public final class Spectrum extends Runner {
    *
    * @see #it(String, Block)
    */
-  public static void fit(final String behavior, final Block block) {
+  public static void fit(final String behavior, final com.greghaskins.spectrum.Block block) {
     getCurrentSuiteBeingDeclared().addSpec(behavior, block).focus();
   }
 
@@ -114,7 +116,7 @@ public final class Spectrum extends Runner {
    *
    * @see #it(String, Block)
    */
-  public static void xit(final String behavior, final Block block) {
+  public static void xit(final String behavior, final com.greghaskins.spectrum.Block block) {
     it(behavior);
   }
 
@@ -128,7 +130,7 @@ public final class Spectrum extends Runner {
    *
    * @param block {@link Block} to run once before each spec
    */
-  public static void beforeEach(final Block block) {
+  public static void beforeEach(final com.greghaskins.spectrum.Block block) {
     getCurrentSuiteBeingDeclared().beforeEach(block);
   }
 
@@ -142,7 +144,7 @@ public final class Spectrum extends Runner {
    *
    * @param block {@link Block} to run once after each spec
    */
-  public static void afterEach(final Block block) {
+  public static void afterEach(final com.greghaskins.spectrum.Block block) {
     getCurrentSuiteBeingDeclared().afterEach(block);
   }
 
@@ -156,7 +158,7 @@ public final class Spectrum extends Runner {
    *
    * @param block {@link Block} to run once before all specs in this suite
    */
-  public static void beforeAll(final Block block) {
+  public static void beforeAll(final com.greghaskins.spectrum.Block block) {
     getCurrentSuiteBeingDeclared().beforeAll(block);
   }
 
@@ -170,7 +172,7 @@ public final class Spectrum extends Runner {
    *
    * @param block {@link Block} to run once after all specs in this suite
    */
-  public static void afterAll(final Block block) {
+  public static void afterAll(final com.greghaskins.spectrum.Block block) {
     getCurrentSuiteBeingDeclared().afterAll(block);
   }
 
@@ -252,7 +254,7 @@ public final class Spectrum extends Runner {
 
   Spectrum(final Description description, final com.greghaskins.spectrum.Block definitionBlock) {
     this.rootSuite = Suite.rootSuite(description);
-    beginDefintion(this.rootSuite, definitionBlock);
+    beginDefinition(this.rootSuite, definitionBlock);
   }
 
   @Override
@@ -265,7 +267,7 @@ public final class Spectrum extends Runner {
     this.rootSuite.run(notifier);
   }
 
-  private static synchronized void beginDefintion(final Suite suite,
+  private static synchronized void beginDefinition(final Suite suite,
       final com.greghaskins.spectrum.Block definitionBlock) {
     suiteStack.push(suite);
     try {
