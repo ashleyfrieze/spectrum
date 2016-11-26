@@ -25,7 +25,7 @@ final class Suite implements Parent, Child {
   private final Description description;
   private final Parent parent;
   private boolean ignored;
-
+  private boolean ignoreNext;
 
   /**
    * The strategy for running the children within the suite.
@@ -105,6 +105,12 @@ final class Suite implements Parent, Child {
 
   private void addChild(final Child child) {
     this.children.add(child);
+    if (this.ignoreNext || isParentIgnored()) {
+      child.ignore();
+    }
+
+    // after adding, ignore next does not apply anymore
+    this.ignoreNext = false;
   }
 
   void beforeAll(final Block block) {
@@ -121,6 +127,10 @@ final class Suite implements Parent, Child {
 
   void afterEach(final Block block) {
     this.afterEach.addBlock(block);
+  }
+
+  void ignoreNext() {
+    this.ignoreNext = true;
   }
 
   @Override
@@ -146,6 +156,11 @@ final class Suite implements Parent, Child {
   @Override
   public boolean isIgnored() {
     return this.ignored;
+  }
+
+  @Override
+  public Parent getParent() {
+    return parent;
   }
 
   @Override

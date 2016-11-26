@@ -5,7 +5,9 @@ import static com.greghaskins.spectrum.Spectrum.afterEach;
 import static com.greghaskins.spectrum.Spectrum.beforeAll;
 import static com.greghaskins.spectrum.Spectrum.beforeEach;
 import static com.greghaskins.spectrum.Spectrum.describe;
+import static com.greghaskins.spectrum.Spectrum.ignore;
 import static com.greghaskins.spectrum.Spectrum.it;
+import static junit.framework.TestCase.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
@@ -133,5 +135,39 @@ public class ExampleSpecs {
 
     });
 
+    describe("A suite using the ignore function", () -> {
+      ignore();
+      describe("An ignored sub-suite", () -> {
+        it("has a child, but that's ignored too", () -> {
+          assertTrue(true);
+        });
+      });
+
+      describe("The next suite does not get ignored by default", () -> {
+        it("is able to run", () -> {
+          assertTrue(true);
+        });
+      });
+
+      describe("A suite can have individually ignored specs", () -> {
+        it("has an non ignored one", () -> {
+          assertTrue(true);
+        });
+
+        ignore();
+        it("has an ignored one", () -> {
+          assertTrue(true);
+        });
+
+        it("has an executed one afterwards", () -> {
+          assertTrue(true);
+        });
+
+        ignore("Ignoring this for demonstration");
+        it("has another ignored one", () -> {
+          assertTrue(true);
+        });
+      });
+    });
   }
 }

@@ -3,10 +3,12 @@ package specs;
 import static com.greghaskins.spectrum.Spectrum.describe;
 import static com.greghaskins.spectrum.Spectrum.fdescribe;
 import static com.greghaskins.spectrum.Spectrum.fit;
+import static com.greghaskins.spectrum.Spectrum.ignore;
 import static com.greghaskins.spectrum.Spectrum.it;
 import static com.greghaskins.spectrum.Spectrum.let;
 import static com.greghaskins.spectrum.Spectrum.xdescribe;
 import static com.greghaskins.spectrum.Spectrum.xit;
+import static junit.framework.TestCase.assertTrue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
@@ -80,6 +82,15 @@ public class IgnoredSpecs {
 
       it("does not run ignored specs", () -> {
         assertThat(result.get().getFailureCount(), is(0));
+      });
+    });
+
+    describe("Ignoring by method", () -> {
+      describe("A single suite", () -> {
+        it("is not executed", () -> {
+          Result result = SpectrumHelper.run(getSingleIgnoredSuite());
+          assertThat(result.getIgnoreCount(), is(1));
+        });
       });
     });
   }
@@ -246,5 +257,20 @@ public class IgnoredSpecs {
     }
 
     return FocusedSpecsExample.class;
+  }
+
+  private static Class<?> getSingleIgnoredSuite() {
+    class SingleIgnoredExample {
+      {
+        ignore();
+        describe("This suite is ignored", () -> {
+          it("should not be run", () -> {
+            assertTrue(true);
+          });
+        });
+      }
+    }
+
+    return SingleIgnoredExample.class;
   }
 }

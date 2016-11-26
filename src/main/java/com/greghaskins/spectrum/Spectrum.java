@@ -142,6 +142,21 @@ public final class Spectrum extends Runner {
   }
 
   /**
+   * Makes the next item ignored.
+   */
+  public static void ignore() {
+    getCurrentSuiteBeingDeclared().ignoreNext();
+  }
+
+  /**
+   * Makes the next item ignored. Allows a reason to be provided. This is not used.
+   * @param reason a description of why the item is being ignored.
+   */
+  public static void ignore(final String reason) {
+    ignore();
+  }
+
+  /**
    * Declare a {@link com.greghaskins.spectrum.Block} to be run before each spec in the suite.
    *
    * <p>
