@@ -157,15 +157,55 @@ public final class Spectrum extends Runner {
   }
 
   /**
-   * Declare a {@link com.greghaskins.spectrum.Block} to be run before each spec in the suite.
-   *
-   * <p>
-   * Use this to perform setup actions that are common across tests in the context. If multiple
-   * {@code beforeEach} blocks are declared, they will run in declaration order.
-   * </p>
-   *
-   * @param block {@link com.greghaskins.spectrum.Block} to run once before each spec
+   * Tag the next item with strings defining its category. This will be used
+   * in conjunction with the current configuration of selected tags to determine
+   * whether this item can be included in this run.
+   * Tagging works in the following order of precedence. A system property is loaded
+   * with the default tags for each of inclusion and exclusion. Then the test class's
+   * use of {@link SpectrumOptions} is read for any overrides. Finally any calls during
+   * test definition to {@link #includeTags(String...)} or {@link #excludeTags(String...)}
+   * override the whole thing.
+   * @param tags tags for the item - as many as required.
    */
+  public static void tag(final String... tags) {
+    if (getCurrentSuiteBeingDeclared().excludesAny(tags)
+        || !getCurrentSuiteBeingDeclared().allowsAny(tags)) {
+      ignore();
+    }
+  }
+
+  /**
+   * From this point forwards, the tags mentioned are included for specs.
+   * This overrides any previous selection for include and applies to the
+   * current suite and its children. If the list is empty, or no tags for inclusion
+   * are ever provided, then the default is to include all.
+   * @param tags tags to select for inclusion.
+   */
+  public static void includeTags(final String... tags) {
+    getCurrentSuiteBeingDeclared().includeTags(tags);
+  }
+
+  /**
+   * From this point forwards, the tags mentioned will cause specs to be ignored.
+   * This overrides any previous selection for exclusion and applies to the
+   * current suite and its children. If the list is empty, or no tags for exclusion
+   * are ever provided, then the default is that nothing is excluded.
+   * @param tags tags to select for exclusion.
+   */
+  public static void excludeTags(final String... tags) {
+    getCurrentSuiteBeingDeclared().excludeTags(tags);
+  }
+
+  /**
+  * Declare a {@link com.greghaskins.spectrum.Block} to be run before each spec in the suite.
+  *
+  * <p>
+  * Use this to perform setup actions that are common across tests in the context. If multiple
+  * {@code beforeEach} blocks are declared, they will run in declaration order.
+  * </p>
+  *
+  * @param block {@link com.greghaskins.spectrum.Block} to run once before each spec
+  */
   public static void beforeEach(final com.greghaskins.spectrum.Block block) {
     getCurrentSuiteBeingDeclared().beforeEach(block);
   }
@@ -287,7 +327,8 @@ public final class Spectrum extends Runner {
    * @see org.junit.runner.Runner
    */
   public Spectrum(final Class<?> testClass) {
-    this(Description.createSuiteDescription(testClass), new ConstructorBlock(testClass));
+    this(Description.createSuiteDescription(testClass),
+        new TaggingBlock(testClass, new ConstructorBlock(testClass)));
   }
 
   Spectrum(final Description description, final com.greghaskins.spectrum.Block definitionBlock) {

@@ -5,6 +5,7 @@ import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,6 +27,9 @@ final class Suite implements Parent, Child {
   private final Parent parent;
   private boolean ignored;
   private boolean ignoreNext;
+
+  private Set<String> includedTags = new HashSet<>();
+  private Set<String> excludedTags = new HashSet<>();
 
   /**
    * The strategy for running the children within the suite.
@@ -64,6 +68,8 @@ final class Suite implements Parent, Child {
     suite.beforeAll.addBlock(this.beforeAll);
     suite.beforeEach.addBlock(this.beforeEach);
     suite.afterEach.addBlock(this.afterEach);
+    suite.includedTags.addAll(this.includedTags);
+    suite.excludedTags.addAll(this.excludedTags);
     addChild(suite);
 
     return suite;
@@ -156,6 +162,47 @@ final class Suite implements Parent, Child {
   @Override
   public boolean isIgnored() {
     return this.ignored;
+  }
+
+  /**
+   * Do the inclusion tags allow any of the given tags.
+   * @param tags to check
+   * @return true if the inclusion tags are empty (meaning all) or contain
+   *        at least one of the tags provided
+   */
+  boolean allowsAny(String[] tags) {
+    return includedTags.isEmpty()
+        || Arrays.stream(tags).filter(includedTags::contains).findFirst().isPresent();
+  }
+
+  /**
+   * Does the suite specifically exclude any of these tags.
+   * @param tags to check
+   * @return true if the tags provided have anything in common with the excluded tags.
+   */
+  boolean excludesAny(String[] tags) {
+    return Arrays.stream(tags).filter(excludedTags::contains).findFirst().isPresent();
+  }
+
+  /**
+   * Apply this list as the inclusion list in place of what's there.
+   * @param tags to apply
+   */
+  void includeTags(String[] tags) {
+    replaceSet(includedTags, tags);
+  }
+
+  /**
+   * Apply this list as the exclusion list in place of what's there.
+   * @param tags to apply
+   */
+  void excludeTags(String[] tags) {
+    replaceSet(excludedTags, tags);
+  }
+
+  private static void replaceSet(Set<String> set, String[] newContent) {
+    set.clear();
+    Arrays.stream(newContent).forEach(set::add);
   }
 
   @Override
