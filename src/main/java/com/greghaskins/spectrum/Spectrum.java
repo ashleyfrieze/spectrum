@@ -37,6 +37,7 @@ public final class Spectrum extends Runner {
    *        each expected behavior
    */
   public static void describe(final String context, final com.greghaskins.spectrum.Block block) {
+    makeSureATagHasBeenApplied();
     final Suite suite = getCurrentSuiteBeingDeclared().addSuite(context);
     beginDefinition(suite, block);
   }
@@ -53,6 +54,7 @@ public final class Spectrum extends Runner {
    */
   public static void describeChain(final String context,
       final com.greghaskins.spectrum.Block block) {
+    makeSureATagHasBeenApplied();
     final Suite suite = getCurrentSuiteBeingDeclared().addAbortingSuite(context);
     beginDefinition(suite, block);
   }
@@ -69,6 +71,7 @@ public final class Spectrum extends Runner {
    *
    */
   public static void fdescribe(final String context, final com.greghaskins.spectrum.Block block) {
+    makeSureATagHasBeenApplied();
     final Suite suite = getCurrentSuiteBeingDeclared().addSuite(context);
     suite.focus();
     beginDefinition(suite, block);
@@ -165,12 +168,23 @@ public final class Spectrum extends Runner {
    * use of {@link SpectrumOptions} is read for any overrides. Finally any calls during
    * test definition to {@link #includeTags(String...)} or {@link #excludeTags(String...)}
    * override the whole thing.
+   * Suites have stricter rules for matching the includeTags criteria. If includeTags is
+   * active, untagged suites cannot match. Tagging of specs is possible, and is used for
+   * filtering with excludeTags. No matter what, a spec inside an excluded suite cannot be run.
    * @param tags tags for the item - as many as required.
    */
   public static void tag(final String... tags) {
-    if (getCurrentSuiteBeingDeclared().excludesAny(tags)
-        || !getCurrentSuiteBeingDeclared().allowsAny(tags)) {
+    final Suite currentSuite = getCurrentSuiteBeingDeclared();
+    if (currentSuite.excludesAny(tags)
+        || !currentSuite.allowsAny(tags)) {
       ignore();
+    }
+    currentSuite.setNextTagged();
+  }
+
+  private static void makeSureATagHasBeenApplied() {
+    if (!getCurrentSuiteBeingDeclared().isNextTagged()) {
+      tag("");
     }
   }
 

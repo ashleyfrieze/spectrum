@@ -83,6 +83,18 @@ public class TaggedSpecs {
             final Result result = SpectrumHelper.run(getSuiteWhereExclusionIsOverridden());
             assertThat(result.getIgnoreCount(), is(1));
           });
+
+      it("is not allowed to be untagged when there's an includesTags set up", () -> {
+        final Result result =
+            SpectrumHelper.run(getSuiteWithNoTagsThatShouldNotRunBecauseOfIncludeTags());
+        assertThat(result.getIgnoreCount(), is(1));
+      });
+
+      it("is possible to exclude individual specs with tags", () -> {
+        final Result result = SpectrumHelper.run(getSuiteWithOneExcludedTaggedSpec());
+        assertThat(result.getIgnoreCount(), is(1));
+      });
+
     });
   }
 
@@ -176,6 +188,43 @@ public class TaggedSpecs {
         tag("someTag");
         describe("A suite", () -> {
           it("has a spec that won't run", () -> {
+            assertTrue(true);
+          });
+        });
+      }
+    }
+
+    return Tagged.class;
+  }
+
+  private static Class<?> getSuiteWithNoTagsThatShouldNotRunBecauseOfIncludeTags() {
+    class Tagged {
+      {
+        includeTags("someTag");
+
+        describe("An untagged suite in an 'includeTags' situation", () -> {
+          it("has a spec that won't run", () -> {
+            assertTrue(true);
+          });
+        });
+      }
+    }
+
+    return Tagged.class;
+  }
+
+  private static Class<?> getSuiteWithOneExcludedTaggedSpec() {
+    class Tagged {
+      {
+        excludeTags("exclude me");
+
+        describe("A plain suite", () -> {
+          it("has a spec that runs fine", () -> {
+            assertTrue(true);
+          });
+
+          tag("exclude me");
+          it("has a spec that will not run", () -> {
             assertTrue(true);
           });
         });

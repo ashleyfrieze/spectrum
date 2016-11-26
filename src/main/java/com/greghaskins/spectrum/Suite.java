@@ -27,6 +27,7 @@ final class Suite implements Parent, Child {
   private final Parent parent;
   private boolean ignored;
   private boolean ignoreNext;
+  private boolean isNextTagged;
 
   private Set<String> includedTags = new HashSet<>();
   private Set<String> excludedTags = new HashSet<>();
@@ -117,6 +118,9 @@ final class Suite implements Parent, Child {
 
     // after adding, ignore next does not apply anymore
     this.ignoreNext = false;
+
+    // and the tagging has expired
+    this.isNextTagged = false;
   }
 
   void beforeAll(final Block block) {
@@ -137,6 +141,14 @@ final class Suite implements Parent, Child {
 
   void ignoreNext() {
     this.ignoreNext = true;
+  }
+
+  void setNextTagged() {
+    this.isNextTagged = true;
+  }
+
+  boolean isNextTagged() {
+    return this.isNextTagged;
   }
 
   @Override

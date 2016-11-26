@@ -133,7 +133,9 @@ public class ExampleSpecs {
 
 ![Spectrum with Eclipse via JUnit](junit-screenshot.png)
 
-### Focused Specs
+### Selective running
+
+#### Focused Specs Rspec style
 
 You can focus the runner on particular spec with `fit` or a suite with `fdescribe` so that only those specs get executed.
 
@@ -174,8 +176,7 @@ describe("Focused specs", () -> {
 });
 ```
 
-### Ignored Specs
-
+#### Ignored Specs Rspec style
 You can ignore a spec with `xit` or ignore all the specs in a suite with `xdescribe`.
 
 > from [IgnoredSpecs.java](src/test/java/specs/IgnoredSpecs.java)
@@ -210,6 +211,103 @@ describe("Ignored specs", () -> {
 });
 ```
 
+#### Ignored Specs JUnit style
+You can ignore a section of the spec by inserting a call to `ignore`
+in front of a `describe` or `it` call to ignore that individual item.
+As `describe` implies a suite, the `ignore` will ignore all children of that
+suite too.
+
+```java
+describe("Ignored specs", () -> {
+    ignore();
+    it("is ignored and will not run", () -> {
+        throw new Exception();
+    });
+
+    it("is not ignored and will run", () -> {
+        assertThat(true, is(true));
+    });
+
+    ignore();
+    describe("an ignored suite", () -> {
+
+        it("will not run", () -> {
+            throw new Exception();
+        });
+
+        describe("with nesting", () -> {
+            it("all its specs", () -> {
+                throw new Exception();
+            });
+        });
+    });
+});
+```
+### Selective running with tags
+
+You can tag things at any level of the hierarchy. You can have several tags.
+
+```java
+tag("wip","acceptance");
+describe( ...
+```
+
+The tags can be used to either positively or negatively select tests to run. Inclusion and
+exclusion rules can be set by:
+
+* System property (See [SpectrumOptions.java](src/main/java/com/greghaskins/spectrum/SpectrumOptions.java))
+* Annotation (See [SpectrumOptions.java](src/main/java/com/greghaskins/spectrum/SpectrumOptions.java))
+* Function call - `includeTags` and `excludeTags` in the `Spectrum` class
+
+If no inclusion/exclusions are provided, then the default is that all tags are allowed to run.
+As soon as tags are marked for inclusion, then only those tags can run. If any tags are marked
+for exclusion then they cannot be run.
+
+Tags allow you run different categories of specs in different test runs, either through the
+configuration of your build - usually with system property - or with hard coding in either the
+class annotation of the test class containing your specs or within the specs themselves.
+
+Example: temporarily making only WIP tests run in a test class
+
+```java
+  @RunWith(Spectrum.class)
+  @SpectrumOptions(includeTags="wip")
+  public TestClass {
+     {
+        tag("wip");
+        describe("wip suite", () -> {
+           // tests here are run
+        });
+
+        tag("someOtherTag");
+        describe("some other suite", () -> {
+           // these are not run
+        });
+
+        describe("untagged suite", () -> {
+           // this suite is untagged but will still not run
+           // as it's not tagged with what it needs to be included
+        });
+     }
+  }
+```
+
+### Gherkin Syntax
+The following Gherkin-like constructs are available (within the `BddSyntax` class):
+
+* Feature - this is a suite, declared using `feature`
+* Scenario - this is also a suite, declared with `scenario` which lives inside a feature
+  * Scenarios can live inside other scenarios, though that's not encouraged
+  * All previous steps in a scenario must have passed for the next to run - the scenario is aborted when a step fails
+* ScenarioOutline - this is a templated scenario, declared with `scenarioOutline` allowing you to parameterise a scenario
+  * You provide a stream of values, each of which is consumed by the definition of your scenario
+  * n-dimensional test sets might be achieved by nested Scenario Outlines
+* Given/When/Then/And - these are all just steps - the same level as `it` specs. They are declared with:
+  * `given`
+  * `when`
+  * `then`
+  * `and`
+
 ### Common Variable Initialization
 
 The `let` helper function makes it easy to initialize common variables that are used in multiple specs. This also helps work around Java's restriction that closures can only reference `final` variables in the containing scope. Values are cached within a spec, and lazily re-initialized between specs as in [RSpec #let](http://rspec.info/documentation/3.5/rspec-core/RSpec/Core/MemoizedHelpers/ClassMethods.html#let-instance_method).
@@ -237,6 +335,32 @@ describe("The `let` helper function", () -> {
     assertThat(items.get(), contains("foo", "bar"));
   });
 });
+```
+
+Values can be held in a box using the `Value` class. This
+allows the outcome of one spec to be used by one following. For
+Rspec style specs this is most likely a lack of test isolation. For
+steps in a Gherkin style test, this is how they will maintain
+the state of the overall scenario test.
+
+> from [BddExampleSpecs.java](src/test/java/specs/BddExampleSpecs.java)
+
+```java
+scenario("uses boxes within the scenario where data is passed between steps", () -> {
+    Value<String> theData = new Value<>();
+
+    given("the data is set", () -> {
+      theData.set("Hello world");
+    });
+
+    when("the data is modified", () -> {
+      theData.set(theData.get() + "!");
+    });
+
+    then("the data can be seen with the addition", () -> {
+      assertThat(theData.get(), is("Hello world!"));
+    });
+  });
 ```
 
 ## Supported Features
