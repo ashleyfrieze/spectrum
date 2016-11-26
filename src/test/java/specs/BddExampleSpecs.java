@@ -1,24 +1,25 @@
 package specs;
 
+import static com.greghaskins.spectrum.BddSyntax.and;
 import static com.greghaskins.spectrum.BddSyntax.feature;
+import static com.greghaskins.spectrum.BddSyntax.given;
 import static com.greghaskins.spectrum.BddSyntax.scenario;
 import static com.greghaskins.spectrum.BddSyntax.scenarioOutline;
-import static com.greghaskins.spectrum.BddSyntax.given;
-import static com.greghaskins.spectrum.BddSyntax.when;
 import static com.greghaskins.spectrum.BddSyntax.then;
-import static com.greghaskins.spectrum.BddSyntax.and;
+import static com.greghaskins.spectrum.BddSyntax.when;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assume.assumeThat;
-
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 
 import com.greghaskins.spectrum.Spectrum;
 import com.greghaskins.spectrum.Value;
+
 import org.junit.runner.RunWith;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /**
  * Demonstrates the BDD syntax of Spectrum.
@@ -74,29 +75,29 @@ public class BddExampleSpecs {
 
       scenarioOutline("rerun template scenario for", Stream.of("A", "B", "C"),
           letter -> {
-		given("the letter " + letter, () -> {
-		  assumeThat(letter.length(), is(1));
-		});
-		then("it is not in the word Error", () -> {
-		  assertFalse("Error".contains(letter));
-		});
-	  });
+            given("the letter " + letter, () -> {
+              assumeThat(letter.length(), is(1));
+            });
+            then("it is not in the word Error", () -> {
+              assertFalse("Error".contains(letter));
+            });
+          });
 
       scenarioOutline("outer parameterised scenario with", Stream.of("A", "B", "C"),
           letter1 -> {
-	  	scenarioOutline("inner parameterised scenario with", Stream.of("Z", "X", "Y"),
-			  letter2 -> {
-			given("the first letter " + letter1, () -> {
-			  assumeThat(letter1.length(), is(1));
-			});
-			and("the second letter " + letter2, () -> {
-			  assumeThat(letter2.length(), is(1));
-			});
-			then("they are never the same", () -> {
-				assertNotEquals(letter1, letter2);
-			});
-		});
-	  });
+            scenarioOutline("inner parameterised scenario with", Stream.of("Z", "X", "Y"),
+                letter2 -> {
+                  given("the first letter " + letter1, () -> {
+                    assumeThat(letter1.length(), is(1));
+                  });
+                  and("the second letter " + letter2, () -> {
+                    assumeThat(letter2.length(), is(1));
+                  });
+                  then("they are never the same", () -> {
+                    assertNotEquals(letter1, letter2);
+                  });
+                });
+          });
     });
   }
 }
