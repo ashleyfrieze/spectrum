@@ -188,14 +188,14 @@ final class Suite implements Parent, Child {
   @Override
   public Description getDescription() {
     final Description copy = this.description.childlessCopy();
-    this.children.stream().forEach((child) -> copy.addChild(child.getDescription()));
+    this.children.forEach((child) -> copy.addChild(child.getDescription()));
 
     return copy;
   }
 
   @Override
   public int testCount() {
-    return this.children.stream().mapToInt((child) -> child.testCount()).sum();
+    return this.children.stream().mapToInt(Child::testCount).sum();
   }
 
   void removeAllChildren() {
@@ -210,14 +210,19 @@ final class Suite implements Parent, Child {
     FailureDetectingRunListener listener = new FailureDetectingRunListener();
     runNotifier.addListener(listener);
     try {
-      for (Child child : suite.children) {
-        if (listener.hasFailedYet()) {
-          child.ignore();
-        }
-        suite.runChild(child, runNotifier);
-      }
+      suite.children.forEach(
+          child -> runChildOrIgnoreIfRunHasAlreadyFailed(suite, runNotifier, child, listener));
     } finally {
       runNotifier.removeListener(listener);
     }
+  }
+
+  private static void runChildOrIgnoreIfRunHasAlreadyFailed(final Suite suite,
+      final RunNotifier runNotifier,
+      final Child child, final FailureDetectingRunListener listener) {
+    if (listener.hasFailedYet()) {
+      child.ignore();
+    }
+    suite.runChild(child, runNotifier);
   }
 }
