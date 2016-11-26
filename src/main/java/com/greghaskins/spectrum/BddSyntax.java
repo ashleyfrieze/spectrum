@@ -37,6 +37,7 @@ public class BddSyntax {
    * @param scenarioName name of scenario
    * @param variants the input data - there will be a scenario for each
    * @param block the internals of the scenario, which must consume and use each variant
+   * @param <T> the type of input to the scenario outline
    */
   public static <T> void scenarioOutline(final String scenarioName,
       final Stream<T> variants, final Consumer<T> block) {
