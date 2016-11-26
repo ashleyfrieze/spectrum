@@ -92,6 +92,12 @@ public class IgnoredSpecs {
           assertThat(result.getIgnoreCount(), is(1));
         });
       });
+      describe("A nested suite", () -> {
+        it("is not executed", () -> {
+          Result result = SpectrumHelper.run(getNestedIgnoredSuite());
+          assertThat(result.getIgnoreCount(), is(2));
+        });
+      });
     });
   }
 
@@ -266,6 +272,26 @@ public class IgnoredSpecs {
         describe("This suite is ignored", () -> {
           it("should not be run", () -> {
             assertTrue(true);
+          });
+        });
+      }
+    }
+
+    return SingleIgnoredExample.class;
+  }
+
+  private static Class<?> getNestedIgnoredSuite() {
+    class SingleIgnoredExample {
+      {
+        ignore();
+        describe("This suite is ignored", () -> {
+          it("should not be run", () -> {
+            assertTrue(true);
+          });
+          describe("A child suite is also ignored", () -> {
+            it("should not be run", () -> {
+              assertTrue(true);
+            });
           });
         });
       }

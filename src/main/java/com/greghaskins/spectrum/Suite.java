@@ -105,7 +105,7 @@ final class Suite implements Parent, Child {
 
   private void addChild(final Child child) {
     this.children.add(child);
-    if (this.ignoreNext || isParentIgnored()) {
+    if (this.ignoreNext || this.ignored) {
       child.ignore();
     }
 
@@ -156,11 +156,6 @@ final class Suite implements Parent, Child {
   @Override
   public boolean isIgnored() {
     return this.ignored;
-  }
-
-  @Override
-  public Parent getParent() {
-    return parent;
   }
 
   @Override
