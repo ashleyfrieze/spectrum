@@ -23,15 +23,17 @@ final class Spec implements Child {
   }
 
   @Override
-  public void run(final RunNotifier notifier) {
+  public void run(final RunNotifier notifier, final BlockExecutor executor) throws Throwable {
     if (this.ignored) {
       notifier.fireTestIgnored(this.description);
       return;
     }
 
-    notifier.fireTestStarted(this.description);
-    this.block.run(this.description, notifier);
-    notifier.fireTestFinished(this.description);
+    executor.execute(() -> {notifier.fireTestStarted(this.description);
+      this.block.run(this.description, notifier);
+      notifier.fireTestFinished(this.description);
+    }, false);
+
   }
 
   @Override

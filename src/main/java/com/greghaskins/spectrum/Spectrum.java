@@ -1,11 +1,21 @@
 package com.greghaskins.spectrum;
 
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.rules.MethodRule;
+import org.junit.rules.RunRules;
+import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runner.Runner;
 import org.junit.runner.notification.RunNotifier;
+import org.junit.runners.model.FrameworkMethod;
+import org.junit.runners.model.Statement;
+import org.junit.runners.model.TestClass;
 
+import java.lang.reflect.Method;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -247,10 +257,23 @@ public final class Spectrum extends Runner {
     }
   }
 
+	static class Box<T> {
+		private T object;
+
+		public void set(T object) {
+			this.object = object;
+		}
+
+		public T get() {
+			return object;
+		}
+	}
 
   private static final Deque<Suite> suiteStack = new ArrayDeque<>();
 
   private final Suite rootSuite;
+	private final TestClass testClass;
+	private final Box<Object> testObjectBox = new Box<>();
 
   /**
    * Main constructor called via reflection by the JUnit runtime.
@@ -260,12 +283,15 @@ public final class Spectrum extends Runner {
    * @see org.junit.runner.Runner
    */
   public Spectrum(final Class<?> testClass) {
-    this(Description.createSuiteDescription(testClass), new ConstructorBlock(testClass));
+	  this.rootSuite = Suite.rootSuite(Description.createSuiteDescription(testClass));
+	  this.testClass = new TestClass(testClass);
+	  beginDefintion(this.rootSuite, new ConstructorBlock(testClass, testObjectBox));
   }
 
-  Spectrum(final Description description, final com.greghaskins.spectrum.Block definitionBlock) {
-    this.rootSuite = Suite.rootSuite(description);
-    beginDefintion(this.rootSuite, definitionBlock);
+  Spectrum(final Class<?> testClass, final Description description, final com.greghaskins.spectrum.Block definitionBlock) {
+	  this.rootSuite = Suite.rootSuite(description);
+	  this.testClass = new TestClass(testClass);
+	  beginDefintion(this.rootSuite, definitionBlock);
   }
 
   @Override
@@ -273,10 +299,17 @@ public final class Spectrum extends Runner {
     return this.rootSuite.getDescription();
   }
 
-  @Override
-  public void run(final RunNotifier notifier) {
-    this.rootSuite.run(notifier);
-  }
+	@Override
+	public void run(final RunNotifier notifier) {
+		Statement runClassStatement = statementOf(() -> rootSuite.run(notifier, this::blockExecute));
+
+		ThrowingSupplier<Void> wrapper = () -> addClassRulesAndExecute(runClassStatement);
+		wrapper.get();
+	}
+
+	private void blockExecute(com.greghaskins.spectrum.Block toExecute, boolean isRoot) throws Throwable {
+		addMethodRulesAndExecute(statementOf(toExecute));
+	}
 
   private static synchronized void beginDefintion(final Suite suite,
       final com.greghaskins.spectrum.Block definitionBlock) {
@@ -295,5 +328,80 @@ public final class Spectrum extends Runner {
   private static synchronized Suite getCurrentSuiteBeingDeclared() {
     return suiteStack.peek();
   }
+
+	private Statement statementOf(final com.greghaskins.spectrum.Block toExecute) {
+		return new Statement() {
+			@Override
+			public void evaluate() throws Throwable {
+				toExecute.run();
+			}
+		};
+	}
+
+	// Returns a void so it can be used with the catching supplier which rather helpfully
+	// wraps checked exceptions when the outside world cannot receive Throwables
+	private Void addClassRulesAndExecute(Statement statement) throws Throwable {
+		addClassRules(statement).evaluate();
+		return null;
+	}
+
+	private Statement addClassRules(Statement base) {
+		List<TestRule> classRules = classRules();
+		return classRules.isEmpty() ? base :
+			new RunRules(base, classRules, getDescription());
+	}
+
+	private List<TestRule> classRules() {
+		List<TestRule> result = testClass.getAnnotatedMethodValues(null, ClassRule.class, TestRule.class);
+		result.addAll(testClass.getAnnotatedFieldValues(null, ClassRule.class, TestRule.class));
+		return result;
+	}
+
+	private void addMethodRulesAndExecute(Statement base) throws Throwable {
+		withTestRules(base).evaluate();
+	}
+
+
+	private Statement withTestRules(Statement base) {
+		if (testObjectBox.get() == null) {
+			return base;
+		}
+		List<MethodRule> methodRules = getMethodRules(testObjectBox.get());
+		return methodRules.isEmpty() ? base : runMethodRules(base, methodRules);
+	}
+
+	private Statement runMethodRules(Statement base, List<MethodRule> methodRules) {
+		class Stub {
+			public void method() {}
+		}
+
+		FrameworkMethod method = null;
+		try {
+			method = new FrameworkMethod(Stub.class.getMethod("method"));
+		} catch (NoSuchMethodException e) {
+			throw new RuntimeException("");
+		}
+
+		Statement result = base;
+		for (org.junit.rules.MethodRule each : methodRules) {
+				result = each.apply(result, method, testObjectBox.get());
+		}
+		return result;
+	}
+
+	/**
+	 * @param target the test case instance
+	 * @return a list of TestRules that should be applied when executing this
+	 *         test
+	 */
+	protected List<MethodRule> getMethodRules(Object target) {
+		List<MethodRule> result = testClass.getAnnotatedMethodValues(target,
+			Rule.class, MethodRule.class);
+
+		result.addAll(testClass.getAnnotatedFieldValues(target,
+			Rule.class, MethodRule.class));
+
+		return result;
+	}
 
 }

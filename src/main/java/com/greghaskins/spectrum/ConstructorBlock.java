@@ -6,9 +6,11 @@ import java.lang.reflect.InvocationTargetException;
 final class ConstructorBlock implements Block {
 
   private final Class<?> klass;
+  private final Spectrum.Box<Object> box;
 
-  ConstructorBlock(final Class<?> klass) {
+  ConstructorBlock(final Class<?> klass, Spectrum.Box<Object> box) {
     this.klass = klass;
+    this.box = box;
   }
 
   @Override
@@ -16,7 +18,7 @@ final class ConstructorBlock implements Block {
     try {
       final Constructor<?> constructor = this.klass.getDeclaredConstructor();
       constructor.setAccessible(true);
-      constructor.newInstance();
+      box.set(constructor.newInstance());
     } catch (final InvocationTargetException invocationTargetException) {
       throw invocationTargetException.getTargetException();
     } catch (final Exception error) {
