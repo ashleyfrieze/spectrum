@@ -58,7 +58,7 @@ public final class Spectrum extends Runner {
    *
    */
   static void compositeSpec(final String context, final com.greghaskins.spectrum.Block block) {
-    final Suite suite = getCurrentSuiteBeingDeclared().addAbortingSuite(context);
+    final Suite suite = getCurrentSuiteBeingDeclared().addCompositeTest(context);
     beginDefinition(suite, block);
   }
 
@@ -176,6 +176,30 @@ public final class Spectrum extends Runner {
     return new Configuration(getCurrentSuiteBeingDeclared());
   }
 
+
+  /**
+   * Implements a rules context within the current suite using the given rules class as a mix-in.
+   * These rules will cascade down and be applied at the level of specs or {@link Atomic}s
+   * @param rulesClass type of object to create and apply rules to for each spec.
+   * @param <T> type of the object
+   * @return a supplier of the rules object
+   */
+  public static <T> Supplier<T> applyRules(final Class<T> rulesClass) {
+    return getCurrentSuiteBeingDeclared().applyRules(rulesClass, true);
+  }
+
+  /**
+   * Implements a rules context within the current suite using the given rules class as a mix-in.
+   * These rules will only run for each immediate child of the suite. If the rules should
+   * run fresh in a fresh rules object for each {@link Atomic} spec
+   * ({@link #it(String, com.greghaskins.spectrum.Block)} etc) then use {@link #applyRules(Class)}
+   * @param rulesClass type of object to create and apply rules to for each spec.
+   * @param <T> type of the object
+   * @return a supplier of the rules object
+   */
+  public static <T> Supplier<T> applyRulesHere(final Class<T> rulesClass) {
+    return getCurrentSuiteBeingDeclared().applyRules(rulesClass, false);
+  }
 
   /**
    * Declare a {@link com.greghaskins.spectrum.Block} to be run before each spec in the suite.
@@ -336,6 +360,10 @@ public final class Spectrum extends Runner {
   Spectrum(Description description, com.greghaskins.spectrum.Block definitionBlock) {
     this.rootSuite = Suite.rootSuite(description);
     beginDefinition(this.rootSuite, definitionBlock);
+
+    if (definitionBlock instanceof ConstructorBlock) {
+      this.rootSuite.insertTestObjectRules(((ConstructorBlock) definitionBlock).get());
+    }
   }
 
   @Override

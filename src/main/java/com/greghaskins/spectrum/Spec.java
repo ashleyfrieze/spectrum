@@ -3,7 +3,7 @@ package com.greghaskins.spectrum;
 import org.junit.runner.Description;
 import org.junit.runner.notification.RunNotifier;
 
-final class Spec implements Child {
+final class Spec implements Child, Atomic {
 
   private final NotifyingBlock block;
   private final Description description;

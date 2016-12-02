@@ -1,15 +1,24 @@
 package com.greghaskins.spectrum;
 
+import static com.greghaskins.spectrum.RuleContextScope.ofNonRecursive;
+import static com.greghaskins.spectrum.RuleContextScope.ofRecursive;
+import static com.greghaskins.spectrum.RuleExecution.runWithClassBlockRules;
+import static com.greghaskins.spectrum.RuleExecution.runWithRules;
+
 import org.junit.runner.Description;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunNotifier;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
-final class Suite implements Parent, Child {
+class Suite implements Parent, Child {
 
   private final SetupBlock beforeAll = new SetupBlock();
   private final TeardownBlock afterAll = new TeardownBlock();
@@ -20,8 +29,10 @@ final class Suite implements Parent, Child {
   private ThrowingConsumer<Block> aroundEach = Block::run;
   private ThrowingConsumer<Block> aroundAll = Block::run;
 
-  private final List<Child> children = new ArrayList<>();
+  protected final List<Child> children = new ArrayList<>();
   private final Set<Child> focusedChildren = new HashSet<>();
+
+  private final LinkedList<RuleContextScope> rulesToApply = new LinkedList<>();
 
   private final ChildRunner childRunner;
 
@@ -51,12 +62,13 @@ final class Suite implements Parent, Child {
    * @param description the JUnit description
    * @param parent parent item
    * @param childRunner which child running strategy to use - this will normally be
-   *        {@link #defaultChildRunner(Suite, RunNotifier)} which runs them all but can be
-   *        substituted for a strategy that ignores all specs after a test failure
-   *        {@link #abortOnFailureChildRunner(Suite, RunNotifier)}
+   *             {@link #defaultChildRunner(Suite, RunNotifier)} which runs them all
+   *             but can be substituted for a strategy that ignores all specs
+   *             after a test failure e.g.
+   *             {@link CompositeTest#abortOnFailureChildRunner(Suite, RunNotifier)}
    * @param taggingState the state of tagging inherited from the parent
    */
-  private Suite(final Description description, final Parent parent, final ChildRunner childRunner,
+  protected Suite(final Description description, final Parent parent, final ChildRunner childRunner,
       final TaggingState taggingState) {
     this.description = description;
     this.parent = parent;
@@ -73,17 +85,29 @@ final class Suite implements Parent, Child {
     final Suite suite =
         new Suite(Description.createSuiteDescription(sanitise(name)), this, childRunner,
             this.tagging.clone());
-    suite.beforeAll.addBlock(this.beforeAll);
-    suite.beforeEach.addBlock(this.beforeEach);
-    suite.afterEach.addBlock(this.afterEach);
-    suite.aroundEach(this.aroundEach);
-    addChild(suite);
+    completeSuiteDefinitionAndAdd(suite);
 
     return suite;
   }
 
-  Suite addAbortingSuite(final String name) {
-    return addSuite(name, Suite::abortOnFailureChildRunner);
+  void completeSuiteDefinitionAndAdd(final Suite suite) {
+    suite.beforeAll.addBlock(this.beforeAll);
+    suite.beforeEach.addBlock(this.beforeEach);
+    suite.afterEach.addBlock(this.afterEach);
+    suite.aroundEach(this.aroundEach);
+    rulesToApply.stream()
+        .map(RuleContextScope::nextGeneration)
+        .filter(scope -> scope != null)
+        .forEach(suite.rulesToApply::add);
+    addChild(suite);
+  }
+
+  Suite addCompositeTest(final String name) {
+    final CompositeTest suite =
+        new CompositeTest(Description.createSuiteDescription(name), this, this.tagging.clone());
+    completeSuiteDefinitionAndAdd(suite);
+
+    return suite;
   }
 
   Child addSpec(final String name, final Block block) {
@@ -105,26 +129,22 @@ final class Suite implements Parent, Child {
         return;
       }
 
-      NotifyingBlock.wrap(() -> {
-
+      NotifyingBlock.run(description, notifier, () -> {
         Variable<Boolean> blockWasRun = new Variable<>(false);
         this.aroundEach.accept(() -> {
           blockWasRun.set(true);
 
-          NotifyingBlock.wrap(() -> {
+          NotifyingBlock.run(description, notifier, () -> {
             this.beforeEach.run();
             block.run();
-          }).run(description, notifier);
+          });
 
           this.afterEach.run(description, notifier);
         });
-
-
         if (!blockWasRun.get()) {
           throw new RuntimeException("aroundEach did not run the block");
         }
-
-      }).run(description, notifier);
+      });
     };
 
     PreConditionBlock preConditionBlock =
@@ -177,6 +197,34 @@ final class Suite implements Parent, Child {
     applyPreConditions(block, this.tagging);
   }
 
+  <T> Supplier<T> applyRules(final Class<T> ruleClass, final boolean recursive) {
+    final RuleContext<T> context = new RuleContext<>(ruleClass);
+    // as rule execution wraps the method execution, the rules must be stored
+    // in reverse order so the wrapping ends up in the correct order
+    rulesToApply.addFirst(recursive ? ofRecursive(context) : ofNonRecursive(context));
+
+    return context;
+  }
+
+  /**
+   * Add a known test object as the first object to get its rules executed.
+   * @param object test object
+   */
+  void insertTestObjectRules(Object object) {
+    if (object != null) {
+      applyRecursively(ofRecursive(new RuleContext<Object>(object)));
+    }
+  }
+
+  void applyRecursively(RuleContextScope scope) {
+    rulesToApply.add(scope);
+    children.stream()
+        .filter(child -> !(child instanceof Atomic))
+        .filter(child -> child instanceof Suite)
+        .map(child -> (Suite) child)
+        .forEach(parent -> parent.applyRecursively(scope));
+  }
+
   @Override
   public void focus(final Child child) {
     this.focusedChildren.add(child);
@@ -206,7 +254,7 @@ final class Suite implements Parent, Child {
   public void run(final RunNotifier notifier) {
     if (testCount() == 0) {
       notifier.fireTestIgnored(this.description);
-      runChildren(notifier);
+      NotifyingBlock.run(getDescription(), notifier, () -> runChildren(notifier));
     } else {
       runSuite(notifier);
     }
@@ -215,11 +263,11 @@ final class Suite implements Parent, Child {
   private void runSuite(final RunNotifier notifier) {
     Variable<Boolean> blockWasCalled = new Variable<>(false);
 
-    NotifyingBlock.wrap(() -> this.aroundAll.accept(() -> {
+    NotifyingBlock.run(getDescription(), notifier, () -> this.aroundAll.accept(() -> {
       blockWasCalled.set(true);
-      runChildren(notifier);
+      NotifyingBlock.run(getDescription(), notifier, () -> runChildren(notifier));
       runAfterAll(notifier);
-    })).run(this.description, notifier);
+    }));
 
     if (!blockWasCalled.get()) {
       RuntimeException exception = new RuntimeException("aroundAll did not run the block");
@@ -227,15 +275,34 @@ final class Suite implements Parent, Child {
     }
   }
 
-  private void runChildren(final RunNotifier notifier) {
-    this.childRunner.runChildren(this, notifier);
+  private void runChildren(final RunNotifier notifier) throws Throwable {
+    runWithClassBlockRules(filteredRules(RuleContextScope::atFirstGeneration),
+        () -> this.childRunner.runChildren(this, notifier), getDescription());
   }
 
-  private void runChild(final Child child, final RunNotifier notifier) {
+  private List<RuleContext> filteredRules(Predicate<RuleContextScope> predicate) {
+    return rulesToApply.stream()
+        .filter(predicate)
+        .map(RuleContextScope::get)
+        .collect(Collectors.toList());
+  }
+
+  protected void runChild(final Child child, final RunNotifier notifier) {
     if (this.focusedChildren.isEmpty() || this.focusedChildren.contains(child)) {
-      child.run(notifier);
+      NotifyingBlock.run(getDescription(), notifier,
+          () -> runWithRules(filteredRules(RuleContextScope::appliesToThisGeneration),
+              child, () -> runChildWithRules(child, notifier)));
     } else {
       notifier.fireTestIgnored(child.getDescription());
+    }
+  }
+
+  private void runChildWithRules(final Child child, final RunNotifier notifier) throws Throwable {
+    if (child instanceof Atomic) {
+      runWithRules(filteredRules(RuleContextScope::appliesToLowerGeneration),
+          child, notifier);
+    } else {
+      child.run(notifier);
     }
   }
 
@@ -264,21 +331,6 @@ final class Suite implements Parent, Child {
     suite.children.forEach((child) -> suite.runChild(child, runNotifier));
   }
 
-  private static void abortOnFailureChildRunner(final Suite suite, final RunNotifier runNotifier) {
-    FailureDetectingRunListener listener = new FailureDetectingRunListener();
-    runNotifier.addListener(listener);
-    try {
-      for (Child child : suite.children) {
-        if (listener.hasFailedYet()) {
-          child.ignore();
-        }
-        suite.runChild(child, runNotifier);
-      }
-    } finally {
-      runNotifier.removeListener(listener);
-    }
-  }
-
   private String sanitise(final String name) {
     String sanitised = name.replaceAll("\\(", "[")
         .replaceAll("\\)", "]");
@@ -293,7 +345,7 @@ final class Suite implements Parent, Child {
     return deDuplicated;
   }
 
-  public void aroundEach(ThrowingConsumer<Block> consumer) {
+  void aroundEach(ThrowingConsumer<Block> consumer) {
     ThrowingConsumer<Block> outerAroundEach = this.aroundEach;
     this.aroundEach = block -> {
       outerAroundEach.accept(() -> {
@@ -303,8 +355,7 @@ final class Suite implements Parent, Child {
     };
   }
 
-  public void aroundAll(ThrowingConsumer<Block> consumer) {
+  void aroundAll(ThrowingConsumer<Block> consumer) {
     this.aroundAll = consumer;
-
   }
 }

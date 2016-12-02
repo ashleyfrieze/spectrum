@@ -2,10 +2,12 @@ package com.greghaskins.spectrum;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.util.function.Supplier;
 
-final class ConstructorBlock implements Block {
+final class ConstructorBlock implements Block, Supplier<Object> {
 
   private final Class<?> klass;
+  private Object testObject;
 
   ConstructorBlock(final Class<?> klass) {
     this.klass = klass;
@@ -16,12 +18,17 @@ final class ConstructorBlock implements Block {
     try {
       final Constructor<?> constructor = this.klass.getDeclaredConstructor();
       constructor.setAccessible(true);
-      constructor.newInstance();
+      testObject = constructor.newInstance();
     } catch (final InvocationTargetException invocationTargetException) {
       throw invocationTargetException.getTargetException();
     } catch (final Exception error) {
       throw new UnableToConstructSpecException(this.klass, error);
     }
+  }
+
+  @Override
+  public Object get() {
+    return testObject;
   }
 
   private class UnableToConstructSpecException extends RuntimeException {

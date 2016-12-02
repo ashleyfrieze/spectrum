@@ -10,6 +10,10 @@ interface NotifyingBlock {
 
   void run(final Description description, final RunNotifier notifier);
 
+  static void run(final Description description, final RunNotifier notifier, final Block block) {
+    wrap(block).run(description, notifier);
+  }
+
   static NotifyingBlock wrap(final Block block) {
     return (description, notifier) -> {
       try {
@@ -20,7 +24,6 @@ interface NotifyingBlock {
         notifier.fireTestFailure(new Failure(description, exception));
       }
     };
-
   }
 
 }
