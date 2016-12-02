@@ -429,7 +429,7 @@ When using the Gherkin syntax, each `given`/`when`/`then` step must pass before 
 
 Spectrum's runner works differently to the normal JUnit `ParentRunner` and `BlockJUnitRunner` derived test runners. In JUnit you normally have a new instance of the test class for every single test method to work with. As Spectrum uses the test class to write functional definitions of tests, there is only a single instance of the test object used throughout.
 
-To enable users to mix in features from across the JUnit ecosystem, there are two ways you can mix in JUnit behaviour with Spectrum tests.
+To enable users to mix in features from across the JUnit ecosystem, there are two ways you can add JUnit behaviour to Spectrum tests.
 
 * You can wire in Rules classes using `applyRules` - these provide multiple instances of the test object of that rules class and execute JUnit `@Rule` directives within it along the way.
 * You _can_ use the Java class within which you have declared the Spectrum tests. This can contain local variables and `@Rule` annotated objects. They will be reused over the course of the test.
@@ -440,7 +440,7 @@ The Spectrum native approach is the safest and cleanest, but is less familiar to
 
 ##### Step 1 - create a class with your JUnit rules in it.
 
-In our examples, that class is a `public static class` inside the test class. This is one option. It does not matter whether the rules class is an inner class, or whether it's external, so long as it is public and has a default constructor. Making these mix-in classes as external reusable objects may be a useful way to modularise testing. It is up to you whether you make the fields accessible, or put getters on them. For simplicity here is an example with accessible fields:
+In Spectrum's own test cases, the mix-in class is a `public static class` inside the test class. This is one option. It does not matter whether the rules class is an inner class, or whether it's external, so long as it is public and has a default constructor. Making these mix-in classes as external reusable objects may be a useful way to modularise testing. It is up to you whether you make the fields accessible, or put getters on them. For simplicity here is an example with accessible fields:
 
 ```java
 public class TestRuleMixin {
