@@ -8,6 +8,9 @@ import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import com.greghaskins.spectrum.internal.parameterized.Example;
+import com.greghaskins.spectrum.internal.parameterized.ParameterizedDefinitionBlock;
+
 /**
  * A translation from Spectrum describe/it to Gherkin-like Feature/Scenario/Given/When/Then syntax
  * Note - any beforeEach and afterEach within a Scenario will still be executed between
@@ -99,62 +102,23 @@ public interface GherkinSyntax {
     it("And " + behavior, block);
   }
 
-  interface DataConsumer3<R, S, T> {
-    void accept(R r, S s, T t);
-  }
+  /**
+   * Scenario outline - composed of examples under a shared name.
+   * @param name
+   * @param block
+   * @param examples
+   * @param <T>
+   */
+  static <T extends ParameterizedDefinitionBlock<T>> void scenarioOutline(final String name, final T block,
+      final Stream<Example<T>> examples) {
 
-  class ExampleSource<T> {
-    private Stream<T> examples;
-
-    public ExampleSource(Stream<T> examples) {
-      this.examples = examples;
-    }
-
-    public void applyAll(Consumer<T> consumer) {
-      examples.forEach(consumer::accept);
-    }
-
-  }
-
-  class Example3<R, S, T> {
-    private R r;
-    private S s;
-    private T t;
-
-    Example3(R r, S s, T t) {
-      this.r = r;
-      this.s = s;
-      this.t = t;
-    }
-
-    void apply(DataConsumer3<R, S, T> consumer) {
-      consumer.accept(r, s, t);
-    }
-
-    @Override
-    public String toString() {
-      return "[" + r +
-          ", " + s +
-          ", " + t +
-          ']';
-    }
-  }
-
-
-  static <R, S, T> void scenarioOutline(final String behaviour, final DataConsumer3<R, S, T> block,
-      final ExampleSource<Example3<R,S,T>> source) {
-    source.applyAll(example -> {
-      scenario(behaviour + " " + example.toString(), () -> {
-        example.apply(block);
+    describe("Scenario outline: " + name, () -> {
+      describe("Examples:", () -> {
+        examples.forEach(example -> {
+          describe(example.toString(), () -> example.runDeclaration(block));
+        });
       });
     });
-  }
 
-  static <T,S> ExampleSource<T> withExamples(T ... examples) {
-    return new ExampleSource<>(Arrays.stream(examples));
-  }
-
-  static <R, S, T> Example3<R, S, T> example(R r, S s, T t) {
-    return new Example3(r, s, t);
   }
 }
