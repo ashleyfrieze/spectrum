@@ -4,12 +4,12 @@ import static com.greghaskins.spectrum.Spectrum.compositeSpec;
 import static com.greghaskins.spectrum.Spectrum.describe;
 import static com.greghaskins.spectrum.Spectrum.it;
 
+import com.greghaskins.spectrum.internal.parameterized.Example;
+import com.greghaskins.spectrum.internal.parameterized.ParameterizedDefinitionBlock;
+
 import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-
-import com.greghaskins.spectrum.internal.parameterized.Example;
-import com.greghaskins.spectrum.internal.parameterized.ParameterizedDefinitionBlock;
 
 /**
  * A translation from Spectrum describe/it to Gherkin-like Feature/Scenario/Given/When/Then syntax
@@ -109,7 +109,8 @@ public interface GherkinSyntax {
    * @param examples
    * @param <T>
    */
-  static <T extends ParameterizedDefinitionBlock<T>> void scenarioOutline(final String name, final T block,
+  static <T extends ParameterizedDefinitionBlock<T>> void scenarioOutline(final String name,
+      final T block,
       final Stream<Example<T>> examples) {
 
     describe("Scenario outline: " + name, () -> {

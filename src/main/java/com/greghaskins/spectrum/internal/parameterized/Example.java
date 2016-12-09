@@ -7,27 +7,27 @@ import java.util.stream.Collectors;
 
 public class Example<T> {
 
-	final String description;
-	private Consumer<T> blockRunner;
+  final String description;
+  private Consumer<T> blockRunner;
 
-	public Example(Consumer<T> blockRunner, Object... arguments) {
-		this.blockRunner = blockRunner;
-		this.description = describe(arguments);
-	}
+  public Example(Consumer<T> blockRunner, Object... arguments) {
+    this.blockRunner = blockRunner;
+    this.description = describe(arguments);
+  }
 
-	public void runDeclaration(T block) {
-		this.blockRunner.accept(block);
-	}
+  public void runDeclaration(T block) {
+    this.blockRunner.accept(block);
+  }
 
-	@Override
-	public String toString() {
-		return description;
-	}
+  @Override
+  public String toString() {
+    return description;
+  }
 
-	private static String describe(Object[] objects) {
-		return Arrays.stream(objects)
-			.map(o -> Optional.ofNullable(o).map(Object::toString).orElse("null"))
-			.collect(Collectors.joining("|", "|", "|"));
-	}
+  private static String describe(Object[] objects) {
+    return Arrays.stream(objects)
+        .map(o -> Optional.ofNullable(o).map(Object::toString).orElse("null"))
+        .collect(Collectors.joining("|", "|", "|"));
+  }
 
 }
