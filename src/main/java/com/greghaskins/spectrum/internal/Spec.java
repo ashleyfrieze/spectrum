@@ -31,9 +31,8 @@ final class Spec implements Child {
       return;
     }
 
-    notifier.fireTestStarted(this.description);
     this.block.run(this.description, notifier);
-    notifier.fireTestFinished(this.description);
+
   }
 
   @Override
@@ -59,6 +58,9 @@ final class Spec implements Child {
   public boolean isAtomic() {
     return true;
   }
+
+  @Override
+  public boolean isLeaf() { return true; }
 
   @Override
   public boolean isEffectivelyIgnored() {

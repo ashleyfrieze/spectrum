@@ -5,6 +5,7 @@ import com.greghaskins.spectrum.internal.blocks.NotifyingBlock;
 import com.greghaskins.spectrum.internal.configuration.BlockConfiguration;
 import com.greghaskins.spectrum.internal.configuration.ConfiguredBlock;
 import com.greghaskins.spectrum.internal.configuration.TaggingFilterCriteria;
+import com.greghaskins.spectrum.internal.hooks.Hook;
 import com.greghaskins.spectrum.internal.hooks.HookContext;
 import com.greghaskins.spectrum.internal.hooks.Hooks;
 
@@ -227,8 +228,30 @@ public class Suite implements Parent, Child {
   }
 
   private void runChildWithHooks(final Child child, final RunNotifier notifier) {
-    getHooksFor(child).sorted().runAround(child.getDescription(), notifier,
+    addLeafHook(getHooksFor(child).sorted(), child).runAround(child.getDescription(), notifier,
         () -> child.run(notifier));
+  }
+
+  private Hooks addLeafHook(final Hooks hooks, final Child child) {
+    if (child.isLeaf()) {
+      hooks.add(testNotifier());
+    }
+    return hooks;
+  }
+
+  private HookContext testNotifier() {
+    return new HookContext(testNotificationHook(), 0, HookContext.AppliesTo.ONCE, HookContext.Precedence.ROOT);
+  }
+
+  private Hook testNotificationHook() {
+    return (description, notifier, block) -> {
+      notifier.fireTestStarted(description);
+      try {
+        block.run();
+      } finally {
+        notifier.fireTestFinished(description);
+      }
+    };
   }
 
   @Override
@@ -263,8 +286,6 @@ public class Suite implements Parent, Child {
 
   private boolean hasANonIgnoredChild() {
     return this.children.stream()
-        .filter(child -> !child.isEffectivelyIgnored())
-        .findFirst()
-        .isPresent();
+        .anyMatch(child -> !child.isEffectivelyIgnored());
   }
 }

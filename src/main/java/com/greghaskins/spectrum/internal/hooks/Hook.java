@@ -13,6 +13,7 @@ import org.junit.runner.notification.RunNotifier;
  * If your hook is going to provide an object to the running test, then implement
  * {@link SupplyingHook} or subclass {@link AbstractSupplyingHook}.
  */
+@FunctionalInterface
 public interface Hook {
   /**
    * Accept the block and execute it, hooking in any behaviour around it.

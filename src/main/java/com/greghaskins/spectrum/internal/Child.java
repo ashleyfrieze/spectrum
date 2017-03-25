@@ -34,6 +34,12 @@ public interface Child {
   }
 
   /**
+   * Does this child appear as an individual test within the test runner.
+   * @return true if it's an individual test item in the runner
+   */
+  default boolean isLeaf() { return false; }
+
+  /**
    * Gets the object to be filtered appropriately with its preconditions.
    * @param block the block that will be executed by the child - this may be of
    *              type {@link ConfiguredBlock}.

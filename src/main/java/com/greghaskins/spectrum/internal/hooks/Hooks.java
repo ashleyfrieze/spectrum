@@ -75,16 +75,26 @@ public class Hooks extends ArrayList<HookContext> {
       final Block block) throws Throwable {
     Variable<Boolean> hooksRememberedToRunTheInner = new Variable<>(false);
 
+    Hook chainOfResponsibility = createChainOfResponsibility(hooksRememberedToRunTheInner);
+    executeChain(description, notifier, block, chainOfResponsibility);
+
+    if (!hooksRememberedToRunTheInner.get()) {
+      throw new RuntimeException("At least one of the test hooks did not run the test block.");
+    }
+  }
+
+  private Hook createChainOfResponsibility(Variable<Boolean> hooksRememberedToRunTheInner) {
     Hook chainOfResponsibility = innerHook(hooksRememberedToRunTheInner);
 
     for (HookContext context : this) {
       chainOfResponsibility = wrap(chainOfResponsibility, context);
     }
-    chainOfResponsibility.accept(description, notifier, block);
+    return chainOfResponsibility;
+  }
 
-    if (!hooksRememberedToRunTheInner.get()) {
-      throw new RuntimeException("At least one of the test hooks did not run the test block.");
-    }
+  private void executeChain(Description description, RunNotifier notifier, Block block, Hook chainOfResponsibility)
+      throws Throwable {
+    chainOfResponsibility.accept(description, notifier, block);
   }
 
   private Hook innerHook(Variable<Boolean> hooksRememberedToRunTheInner) {
