@@ -42,7 +42,9 @@ describe("The `let` helper function", () -> {
 });
 ```
 
-For cases where you need to access a shared variable across specs or steps, the `Variable` helper class provides a simple `get`/`set` interface. This may be required, for example, to initialize shared state in a `beforeAll` that is used across multiple specs in that suite. Of course, you should exercise caution when sharing state across tests
+For cases where you need to access a shared variable across specs or steps, the `Variable` helper class provides a simple `get`/`set` interface. This may be required, for example, to initialize shared state in a `beforeAll` that is used across multiple specs in that suite. Of course, you should exercise caution when sharing state across tests.
+
+**Note:** to avoid pollution between concurrent tests, `Variable` is isolated to the current thread. Use `SharedVariable` for multi-threaded applications - [see ParallelTestExecution](ParallelTestExecution.md)
 
 > from [VariableSpecs.java](../src/test/java/specs/VariableSpecs.java)
 

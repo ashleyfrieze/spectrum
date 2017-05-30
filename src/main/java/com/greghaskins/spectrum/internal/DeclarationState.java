@@ -9,6 +9,13 @@ import com.greghaskins.spectrum.internal.hooks.HookContext.Precedence;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+/**
+ * DeclarationState - a singleton that tracks the hierarchy of suites that are currently being defined.
+ * This allows all suite definition to be static calls.
+ * The state is actually singleton within each thread, allowing Spectrum suites to be executed
+ * by a parallelised test runner. This means you can use in-process parallel test discovery and execution with
+ * Spectrum on top of its own parallel features.
+ */
 public final class DeclarationState {
 
   private static final ThreadLocal<DeclarationState> instance =

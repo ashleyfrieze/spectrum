@@ -12,6 +12,7 @@ Spectrum provides two ways of writing tests:
 Spectrum also supports:
 
 - Unlimited nesting of suites within suites
+- Execution of tests [in parallel](ParallelTestExecution.md)
 - Rigorous error handling and reporting when something unexpected goes wrong
 - Compatibility with most existing JUnit tools; no configuration required
 - Plugging in familiar JUnit-friendly libraries like `MockitoJUnit` or `SpringJUnit` [via JUnit `@Rule`s handling](JunitRules.md).
